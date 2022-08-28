@@ -1,0 +1,57 @@
+{
+    "name": "defichain-wizard",
+    "version": "0.5.0",
+    "description": "Let magic do the hard work for you!",
+    "main": "./src/index.js",
+    "engines": {
+        "node": ">=16"
+    },
+    "scripts": {
+        "start": "ts-node ./src/index.ts",
+        "startprod": "node ./dist/index.js",
+        "test": "jest --testPathIgnorePatterns=test.invasive.ts --passWithNoTests",
+        "testall": "jest",
+        "build": "ncc build src/index.ts -o dist -m"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/DeFiChain-Wizard/defichain-wizard-backend.git"
+    },
+    "keywords": [
+        "dfi",
+        "vault",
+        "roadto50"
+    ],
+    "author": "Defichain Wizard",
+    "license": "GPL-3.0-or-later",
+    "bugs": {
+        "url": "https://github.com/DeFiChain-Wizard/defichain-wizard-backend/issues"
+    },
+    "homepage": "https://defichain-wizard.com",
+    "dependencies": {
+        "@defichain/jellyfish-wallet": "2.54.1",
+        "@defichain/jellyfish-wallet-mnemonic": "2.54.1",
+        "@defichain/whale-api-client": "2.54.1",
+        "@defichain/whale-api-wallet": "2.54.1",
+        "@defichainwizard/custom-logging": "latest",
+        "@defichainwizard/custom-transactions": "latest",
+        "dotenv": "^16.0.1",
+        "ts-node": "^10.9.1"
+    },
+    "devDependencies": {
+        "@types/jest": "^28.1.6",
+        "@types/node": "^18.6.1",
+        "@typescript-eslint/parser": "^5.31.0",
+        "jest-config": "^28.1.3",
+        "@typescript-eslint/eslint-plugin": "^5.31.0",
+        "@typescript-eslint/eslint-plugin-tslint": "^5.31.0",
+        "@vercel/ncc": "^0.34.0",
+        "eslint": "^8.20.0",
+        "eslint-config-prettier": "^8.5.0",
+        "eslint-plugin-prettier": "^4.2.1",
+        "jest": "^28.1.3",
+        "prettier": "2.7.1",
+        "ts-jest": "^28.0.7",
+        "typescript": "^4.7.4"
+    }
+}

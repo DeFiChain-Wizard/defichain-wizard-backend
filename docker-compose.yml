@@ -1,0 +1,13 @@
+version: "3.6"
+
+services:
+  defichain-wizard: 
+    image: defichainwizard/wizard:${TAG:-latest}
+    build: ./
+    environment:
+      WIZ_TELEGRAM_TOKEN: ${WIZ_TELEGRAM_TOKEN:-DUMMY}
+      WIZ_TELEGRAM_CHATID: ${WIZ_TELEGRAM_CHATID:-DUMMY}
+      WIZ_BOT_ADDRESS: ${WIZ_BOT_ADDRESS}
+      WIZ_SEED_PHRASE: ${WIZ_SEED_PHRASE}
+    restart: unless-stopped
+    command: "dist/index.js"

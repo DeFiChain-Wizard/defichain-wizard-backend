@@ -1,0 +1,122 @@
+name: Docker
+
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+# Builds docker image and pushes only if pull request/merge title contains "[Release]" - tag will be used from package.json
+
+on:
+  push:
+    branches: ['main']
+  pull_request:
+    branches: ['main']
+
+env:
+  # Use docker.io for Docker Hub if empty
+  REGISTRY: docker.io
+  IMAGE_NAME: defichainwizard/wizard
+  CREATE_RELEASE: ${{github.ref == 'refs/heads/main' && github.event_name == 'push' && startsWith(github.event.head_commit.message, '[Release]')}}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions: write-all
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Extract version
+        id: extract_version
+        if: ${{env.CREATE_RELEASE == 'true'}}
+        uses: Saionaro/extract-package-version@v1.0.6
+
+      - name: Print version
+        if: ${{env.CREATE_RELEASE == 'true'}}
+        run: echo ${{ steps.extract_version.outputs.version }}
+
+      # Creates the release
+      - name: Create Release
+        id: create_release
+        if: ${{env.CREATE_RELEASE == 'true'}}
+        uses: 'marvinpinto/action-automatic-releases@latest'
+        with:
+          automatic_release_tag: v${{ steps.extract_version.outputs.version }}
+          title: v${{ steps.extract_version.outputs.version }}
+          repo_token: '${{ secrets.GITHUB_TOKEN }}'
+          prerelease: false
+
+      # Install the cosign tool except on PR
+      # https://github.com/sigstore/cosign-installer
+      - name: Install cosign
+        if: ${{env.CREATE_RELEASE == 'true'}}
+        uses: sigstore/cosign-installer@7e0881f8fe90b25e305bbf0309761e9314607e25
+        with:
+          cosign-release: 'v1.11.1'
+
+      # Workaround: https://github.com/docker/build-push-action/issues/461
+      - name: Setup Docker buildx
+        uses: docker/setup-buildx-action@79abd3f86f79a9d68a23c75a09a9a85889262adf
+
+      # Login against a Docker registry except on PR
+      # https://github.com/docker/login-action
+      - name: Log into registry ${{ env.REGISTRY }}
+        if: ${{env.CREATE_RELEASE == 'true'}}
+        uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: defichainwizardteam
+          password: ${{ secrets.DOCKER_LOGIN }}
+
+      # Extract metadata (tags, labels) for Docker
+      # https://github.com/docker/metadata-action
+      - name: Extract Docker metadata
+        id: meta
+        if: ${{env.CREATE_RELEASE == 'true'}}
+        uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      # Build and push Docker image with Buildx (don't push on PR)
+      # https://github.com/docker/build-push-action
+      - name: Build Docker image
+        id: build-docker
+        if: ${{ env.CREATE_RELEASE == 'false' }}
+        uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a
+        with:
+          context: .
+          push: false
+          tags: ${{ steps.extract_version.outputs.version }}
+          labels: ${{ steps.extract_version.outputs.version }}
+
+      # Build and push Docker image with Buildx (don't push on PR)
+      # https://github.com/docker/build-push-action
+      - name: Build and push Docker image
+        id: build-and-push-docker
+        if: ${{env.CREATE_RELEASE == 'true'}}
+        uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a
+        with:
+          context: .
+          push: true
+          tags: defichainwizard/wizard:latest, defichainwizard/wizard:v${{ steps.extract_version.outputs.version }}
+          labels: Release v${{ steps.extract_version.outputs.version }}
+
+      - name: Write signing key to disk
+        if: ${{env.CREATE_RELEASE == 'true'}}
+        run: 'echo "$KEY" > cosign.key'
+        shell: bash
+        env:
+          KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+
+      # Sign the resulting Docker image digest except on PRs.
+      # This will only write to the public Rekor transparency log when the Docker
+      # repository is public to avoid leaking data.  If you would like to publish
+      # transparency data even for private images, pass --force to cosign below.
+      # https://github.com/sigstore/cosign
+      - name: Sign the published Docker image
+        if: ${{env.CREATE_RELEASE == 'true'}}
+        env:
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: cosign sign --key cosign.key ${{ env.REGISTRY }}/defichainwizard/wizard
