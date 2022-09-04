@@ -18,7 +18,6 @@ import { ActivePrice } from '@defichain/whale-api-client/dist/api/prices';
 import { Transaction } from '@defichainwizard/custom-transactions';
 import { logDebug, logInfo } from '@defichainwizard/custom-logging';
 import { logErrorTelegram } from '../utils/helpers';
-
 /**
  * The DFI Wallet that offers all operations on the wallet. It can return certain information about the desired wallet.
  */
@@ -328,7 +327,6 @@ class DFIWallet {
     const vault = await this.getVault(vaultAddress);
     const nextLoanValue = vault.getNextLoanValue();
     const nextCollateralValue = vault.getNextCollateralValue();
-
     const totalRequiredPayback = BigNumber.max(
       new BigNumber(vault.loanVault.loanValue).minus(
         new BigNumber(vault.loanVault.collateralValue).dividedBy(ratioDivider)
@@ -361,15 +359,19 @@ class DFIWallet {
           throw `Could not get the Liquidity Pool for ${token}-DUSD`;
         }
 
-        if (requiredPayback.lte(0)) {
-          logErrorTelegram(
-            `Oops, I cannot payback token ${token}, it looks like it was not part of a loan!
+        if (new BigNumber(vault.loanVault.loanValue).eq(0)) {
+          logDebug(`No loan exists`);
+        } else {
+          if (requiredPayback.lte(0)) {
+            logErrorTelegram(
+              `Oops, I cannot payback token ${token}, it looks like it was not part of a loan!
 
 Please clean up your wallet manually! Your wallet should not contain any dTokens that are not part of a loan.
 
 After the cleanup I can take over again. 🧙`
-          );
-          throw `For some reason the required payback is negative for token ${token}. Loan: ${vault.loanVault.loanValue} / ${nextLoanValue}`;
+            );
+            throw `For some reason the required payback is negative for token ${token}. Loan: ${vault.loanVault.loanValue} / ${nextLoanValue}`;
+          }
         }
 
         const dTokenOracle = (await this.getOraclePriceFeed(token)).active
@@ -385,9 +387,6 @@ After the cleanup I can take over again. 🧙`
         vault.loanVault.loanAmounts.forEach((loanAmount) => {
           logDebug(`Loan: ${loanAmount.displaySymbol} (${loanAmount.amount})`);
         });
-
-        // $5 zurück
-        // 1 Token = $10 -> 1/2 Token
 
         const poolValue = BigNumber.sum(
           new BigNumber(dTokenOracle).multipliedBy(
