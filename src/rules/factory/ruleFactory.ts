@@ -32,6 +32,15 @@ export class RuleFactory extends BaseFactory {
       `Getting LM Tokens required to get back to Ratio of : ${safetyRatio}%`
     );
 
+    logDebug(`Current Loan Value: ${vault.loanVault.loanValue}`);
+
+    // Don't run Savety Check if there is no loan
+    if (new BigNumber(vault.loanVault.loanValue).eq(0)) {
+      logDebug(`There is currently no loan. Skipping Safety-check.`);
+      return true;
+    }
+
+    // Don't run Savety Check if ratio is high
     if (
       vault.getCurrentCollateralRatio().gt(safetyRatio) &&
       vault.getNextCollateralRatio().gt(safetyRatio)

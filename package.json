@@ -1,6 +1,6 @@
 {
     "name": "defichain-wizard",
-    "version": "0.5.0",
+    "version": "0.5.1",
     "description": "The DeFiChain-Wizard is an App that allows you to automate vaults and other tools on the DeFiChain Blockchain.",
     "main": "./src/index.js",
     "engines": {

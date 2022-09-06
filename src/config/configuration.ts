@@ -174,6 +174,7 @@ const checkConfig = (
 
   const returnMessage = JSON.parse(JSON.stringify(message));
 
+  // do this as long as we only support one pool pair - just remove it, once we can deal with 1+
   let count = 0;
   for (const key in message.poolpairs) {
     returnMessage.poolpairs[key] = 100;
@@ -227,29 +228,37 @@ const setBotConfig = (
     vaultMinCollateralRatio
   );
 
-  // do this as long as we only support one pool pair - just remove it, once we can deal with 1+
   logDebug('Storing received bot configuration...');
   logDebug(customConfig);
 
-  sendMessageToTelegram(
-    `I'm going to use *${customConfig.rules.keepMinRatio}%* as minimum and *${customConfig.rules.keepMaxRatio}%* as maximum ratio.
-
-I'll make sure to keep your vault ratio in this range. 🪄
-
-☝️ _Don't worry when your vault occasionaly has a higher ratio than your configured maximum ratio. I'm looking into the future and know when the ratio will drop within the next hour._`
-  );
-
+  logDebug(`Current Poolpairs`);
   for (const key in customConfig.poolpairs) {
     logDebug(key, customConfig.poolpairs[key]);
   }
 
-  sendMessageToTelegram(
-    `*Here is your configured pool pair*:
+  // do not send configuration on telegram if pause is activated
+  if (customConfig.pause === -1) {
+    logDebug(
+      `Currently the Bot is put to sleep and won't do anything. Pause = ${customConfig.pause}`
+    );
+  } else {
+    sendMessageToTelegram(
+      `I'm going to use *${customConfig.rules.keepMinRatio}%* as minimum and *${customConfig.rules.keepMaxRatio}%* as maximum ratio.
+
+I'll make sure to keep your vault ratio in this range. 🪄
+
+☝️ _Don't worry when your vault occasionaly has a higher ratio than your configured maximum ratio. I'm looking into the future and know when the ratio will drop within the next hour._`
+    );
+
+    sendMessageToTelegram(
+      `*Here is your configured pool pair*:
    
 ${Object.keys(customConfig.poolpairs)
   .map((poolpair) => `${poolpair}-DUSD`)
   .join('\n')}`
-  );
+    );
+  }
+
   if (isCustomMessage(customConfig)) botConfig = customConfig;
   else if (isVersionMessage(config)) versionConfig = config;
 };
@@ -258,12 +267,16 @@ ${Object.keys(customConfig.poolpairs)
  * Returns the bot config.
  * @returns the bot config
  */
-const getBotConfig = (): CustomMessage | undefined => {
+const getBotConfig = (
+  sendMissingConfigInfoToTelegram?: boolean
+): CustomMessage | undefined => {
   if (botConfig) return botConfig;
   // don't send it to the user via Telegram
-  logErrorTelegram(
-    'Your wizard tried to find a bot config, but did not find anything! Please use the DeFiChain Wizard app to configure your Wizard.'
-  );
+  if (sendMissingConfigInfoToTelegram) {
+    logErrorTelegram(
+      'Your wizard tried to find a bot config, but did not find anything! Please use the DeFiChain Wizard app to configure your Wizard.'
+    );
+  }
   return undefined;
 };
 

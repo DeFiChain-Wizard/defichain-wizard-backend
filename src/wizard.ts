@@ -78,6 +78,20 @@ class Wizard {
           logInfo('New configuration found. Will update bot...');
 
           try {
+            // get config
+            let oldPause = 0;
+
+            logDebug(`Old Config:`);
+
+            const config = getBotConfig();
+            if (config) {
+              logDebug(config);
+              oldPause = config.pause;
+            } else {
+              oldPause = 0;
+            }
+
+            // new config
             const message = transaction.getCustomMessage(
               wizardTransaction.message
             );
@@ -90,7 +104,11 @@ class Wizard {
             Wizard.lastConfigBlockTime = wizardTransaction.blockTime;
             Wizard.pauseHasElapsedMessageSent = false;
 
-            if (ConfigMessage.pause > 0) {
+            if (oldPause == -1 && ConfigMessage.pause >= 0) {
+              sendMessageToTelegram(
+                `✅ My break is over! Now I'll take care of your vault again 👍`
+              );
+            } else if (ConfigMessage.pause > 0) {
               sendMessageToTelegram(
                 `⏸ You have configured a break for me. I'll stop guarding your vault for the next ${ConfigMessage.pause} minutes.`
               );
@@ -107,7 +125,7 @@ class Wizard {
         }
 
         // get config again - this time as bot config
-        const config = getBotConfig();
+        const config = getBotConfig(true);
         // check if config was found OR config pause is set to -1
         if (typeof config !== 'undefined' && config.pause >= 0) {
           // If Pause is > 0 we will wait for the configured number in minutes
@@ -180,7 +198,7 @@ class Wizard {
           );
         }
       } else {
-        const config = getBotConfig();
+        const config = getBotConfig(true);
         let currentVaultRatio = new BigNumber(0);
         let nextVaultRatio = new BigNumber(0);
 
