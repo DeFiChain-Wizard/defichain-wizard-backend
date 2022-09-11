@@ -18,6 +18,7 @@ import { ActivePrice } from '@defichain/whale-api-client/dist/api/prices';
 import { Transaction } from '@defichainwizard/custom-transactions';
 import { logDebug, logInfo } from '@defichainwizard/custom-logging';
 import { logErrorTelegram } from '../utils/helpers';
+import { isUndefined } from 'util';
 /**
  * The DFI Wallet that offers all operations on the wallet. It can return certain information about the desired wallet.
  */
@@ -432,8 +433,38 @@ After the cleanup I can take over again. 🧙`
    * @returns list of LoanAmounts - expeted amount of dToken and DUSD when removing Liquidity
    */
   public async getExpectedTokensFromLMToken(
-    lmTokenAmounts: LiquidityPoolPairAmount[]
+    lmTokenAmounts: LiquidityPoolPairAmount[],
+    vault: Vault
   ): Promise<LoanAmount[]> {
+    // get DUSD Loan Amounts
+
+    let maxDUSDPayback = new BigNumber(0);
+    vault.loanVault.loanAmounts.forEach((loanAmount) => {
+      if (loanAmount.symbol == 'DUSD') {
+        maxDUSDPayback = new BigNumber(loanAmount.amount);
+      }
+    });
+
+    let interestDUSD = new BigNumber(0);
+    vault.loanVault.interestAmounts.forEach((interestAmount) => {
+      if (interestAmount.symbol == 'DUSD') {
+        interestDUSD = new BigNumber(interestAmount.amount);
+      }
+    });
+
+    if (interestDUSD.gt(0)) {
+      logDebug(`Interest DUSD: ${interestDUSD}`);
+    } else {
+      logDebug(`There is currently no DUSD interest.`);
+    }
+
+    if (maxDUSDPayback.gt(0)) {
+      logDebug(`MaxLoan DUSD: ${maxDUSDPayback}`);
+      logDebug(`MaxLoan - Interest: ${maxDUSDPayback.plus(interestDUSD)}`);
+    } else {
+      logDebug(`Couldn't find DUSD loan!`);
+    }
+
     const retAmount: LoanAmount[] = [];
     let dUSDAmount = new BigNumber(0);
     for (const amount of lmTokenAmounts) {
@@ -464,6 +495,7 @@ After the cleanup I can take over again. 🧙`
         `Expected dTokens: ${dTokenInfo.displaySymbol} (${expectedDTokens})`
       );
 
+      // sum up dUSD amounts in order to have only one dUSD payback loan
       dUSDAmount = dUSDAmount.plus(poolShare.multipliedBy(dUSDInfo.reserve));
       retAmount.push({
         amount: expectedDTokens,
@@ -471,10 +503,21 @@ After the cleanup I can take over again. 🧙`
       });
     }
 
-    const expectedDUSD = dUSDAmount.decimalPlaces(6, BigNumber.ROUND_FLOOR);
+    let expectedDUSD = dUSDAmount.decimalPlaces(6, BigNumber.ROUND_FLOOR);
     logDebug(`Expected dUSD Payback: (${expectedDUSD})`);
 
-    retAmount.push({ amount: expectedDUSD, token: 'DUSD' });
+    if (expectedDUSD > maxDUSDPayback.plus(interestDUSD)) {
+      logDebug(
+        `Detected overpayment for dUSD loan -> limiting payback to maxPayBack: ${maxDUSDPayback.plus(
+          interestDUSD
+        )}`
+      );
+      expectedDUSD = maxDUSDPayback.plus(interestDUSD);
+    }
+
+    logDebug(`dUSD Payback: (${expectedDUSD})`);
+
+    const neededDUSD = retAmount.push({ amount: expectedDUSD, token: 'DUSD' });
     return retAmount;
   }
   /**
