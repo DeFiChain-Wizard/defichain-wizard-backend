@@ -18,7 +18,7 @@ import { ActivePrice } from '@defichain/whale-api-client/dist/api/prices';
 import { Transaction } from '@defichainwizard/custom-transactions';
 import { logDebug, logInfo } from '@defichainwizard/custom-logging';
 import { logErrorTelegram } from '../utils/helpers';
-import { isUndefined } from 'util';
+
 /**
  * The DFI Wallet that offers all operations on the wallet. It can return certain information about the desired wallet.
  */
@@ -517,7 +517,7 @@ After the cleanup I can take over again. 🧙`
 
     logDebug(`dUSD Payback: (${expectedDUSD})`);
 
-    const neededDUSD = retAmount.push({ amount: expectedDUSD, token: 'DUSD' });
+    retAmount.push({ amount: expectedDUSD, token: 'DUSD' });
     return retAmount;
   }
   /**
