@@ -234,7 +234,7 @@ export class ActionFactory extends BaseFactory {
         logDebug(`Compounding Mode 0: Compounding is deactivated. -> skipping`);
         return new ActionSet({
           name: 'Compounding Mode 0',
-          finishMessage: 'Compounding not activated.',
+          finishMessage: 'n/a',
           actions: [],
           walletData: {
             client: this.client,
