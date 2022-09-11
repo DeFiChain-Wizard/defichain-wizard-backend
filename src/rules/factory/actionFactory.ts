@@ -230,6 +230,18 @@ export class ActionFactory extends BaseFactory {
     swapTokenTo?: string
   ): ActionSet {
     switch (mode) {
+      case 0: {
+        logDebug(`Compounding Mode 0: Compounding is deactivated. -> skipping`);
+        return new ActionSet({
+          name: 'Compounding Mode 0',
+          finishMessage: 'Compounding not activated.',
+          actions: [],
+          walletData: {
+            client: this.client,
+            vaultId: this.vaultId
+          }
+        });
+      }
       case 1: {
         logDebug(`Compounding Mode 1: Increase DFI Collateral`);
         return new ActionSet({
@@ -469,7 +481,8 @@ export class ActionFactory extends BaseFactory {
       try {
         // Getting Expected dTokens we receive from removeLiquidity
         const expectedDTokens = await this.wallet.getExpectedTokensFromLMToken(
-          amounts
+          amounts,
+          vault
         );
         const loanWrkr = new LoanWorker(this.wallet, this.vaultId);
 

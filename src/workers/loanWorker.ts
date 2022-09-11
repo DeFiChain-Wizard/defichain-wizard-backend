@@ -51,7 +51,7 @@ export class LoanWorker extends BaseWorker {
 
     const loans2Payback = loanAmounts.map((amount) => {
       return {
-        dToken: amount.token, // What is this? is this to be able to payback dusd loan with dfi?
+        dToken: amount.token,
         amounts: [amount]
       };
     });

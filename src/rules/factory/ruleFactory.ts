@@ -82,7 +82,8 @@ export class RuleFactory extends BaseFactory {
       // check if we have the correct loans
     }
     const expectedTokens = await this.wallet.getExpectedTokensFromLMToken(
-      neededLMTokens
+      neededLMTokens,
+      vault
     );
     const expectedDToken = expectedTokens.filter(
       (token) => token.token !== 'DUSD'
