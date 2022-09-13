@@ -247,7 +247,7 @@ const setBotConfig = (
 
 I'll make sure to keep your vault ratio in this range. 🪄
 
-☝️ _Don't worry when your vault occasionaly has a higher ratio than your configured maximum ratio. I'm looking into the future and know when the ratio will drop within the next hour._`
+☝️ _Don't worry if your vault occasionally has a higher ratio than your configured maximum ratio. As a wizard I can look into the future and know when the ratio will drop.`
     );
 
     sendMessageToTelegram(
@@ -274,7 +274,7 @@ const getBotConfig = (
   // don't send it to the user via Telegram
   if (sendMissingConfigInfoToTelegram) {
     logErrorTelegram(
-      'Your wizard tried to find a bot config, but did not find anything! Please use the DeFiChain Wizard app to configure your Wizard.'
+      "⚠️ Ouch, I've tried to find a bot config, but did not find any! But that's easy to fix: Please download and use the DeFiChain Wizard app to configure your Wizard."
     );
   }
   return undefined;
