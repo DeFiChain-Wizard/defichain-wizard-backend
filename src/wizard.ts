@@ -106,15 +106,15 @@ class Wizard {
 
             if (oldPause == -1 && ConfigMessage.pause >= 0) {
               sendMessageToTelegram(
-                `✅ My break is over! Now I'll take care of your vault again 👍`
+                `✅ My break is over! Now I'll take care of your vault again. 👍`
               );
             } else if (ConfigMessage.pause > 0) {
               sendMessageToTelegram(
-                `⏸ You have configured a break for me. I'll stop guarding your vault for the next ${ConfigMessage.pause} minutes.`
+                `⏸ Ok, time to rest for me. I'll stop guarding your vault for the next ${ConfigMessage.pause} minutes.`
               );
             } else if (ConfigMessage.pause == -1) {
               sendMessageToTelegram(
-                `🚨 You have put me to sleep. I'll not take any actions until you wake me again.`
+                `🚨 You have put me to sleep. I'll not take any actions until you wake me up again. Looking forward to do some magic for you again. 🪄`
               );
             }
           } catch (e) {

@@ -59,10 +59,10 @@ const sendVaultRatioToTelegram = (vault: Vault, targetRatio: number): void => {
 Current: ${currentRatio.toFixed(2)}%
 Next: ${nextRatio.toFixed(2)}%
 
-Your target ratio should be: ${targetRatio}%.
+Your target ratio should be: ${targetRatio.toFixed(2)}%.
 
 I will cast a spell now to put things into order again! Abracadabra! 🪄`
-      : `There is no vault ratio yet. that means that you don't have a loan yet.
+      : `There is no vault ratio yet, which means that you don't have a loan yet.
       
 Let me see if I can do some magic here! 🪄`
   );
@@ -81,7 +81,9 @@ const logErrorTelegram = (
     sendMessageToTelegram(
       `⚠️ ${message[0]}
       
-Please send me your logs via Telegram or Discord, so my developers can analyze it! 🧙`
+If you see this error more than 3 times, then some dark wizardry seems to fight against me.
+
+If that is the case, then please send me your logs via Telegram or Discord, so my masters can teach me some new moves and make me better! 🧙`
     );
   } else {
     logWarn(
