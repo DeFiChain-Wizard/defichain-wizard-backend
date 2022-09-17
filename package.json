@@ -38,6 +38,7 @@
         "@defichain/whale-api-wallet": "2.54.1",
         "@defichainwizard/custom-logging": "latest",
         "@defichainwizard/custom-transactions": "latest",
+        "@types/semver": "^7.3.12",
         "dotenv": "^16.0.1",
         "node-fetch": "2.6.7",
         "ts-node": "^10.9.1"

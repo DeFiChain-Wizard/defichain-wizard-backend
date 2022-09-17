@@ -29,6 +29,7 @@ import {
 import { SmartInterval } from './utils/smartInterval';
 import { BigNumber } from '@defichain/jellyfish-api-core';
 import { RequestInfo, RequestInit } from 'node-fetch';
+import * as semver from 'semver';
 
 // Initially it will be 2010000 (round July 2022, before DeFiChain Wizard was released) and will change once we found the first block that contained a config
 const INITIAL_LAST_CONFIG_BLOCK = 2010000;
@@ -248,7 +249,9 @@ class Wizard {
     logDebug(`Bot Version:    ${botVersion}`);
     logDebug(`Github Version: ${gitHubVersion}`);
 
-    if (gitHubVersion != botVersion) {
+    //const semver = new semver();
+
+    if (semver.gt(gitHubVersion, botVersion)) {
       sendMessageToTelegram(`⚙️ I've found a new backend version *${gitHubVersion}*
 
 ☝️ Please update your current backend installation.`);
