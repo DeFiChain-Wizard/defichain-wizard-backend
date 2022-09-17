@@ -243,7 +243,7 @@ class Wizard {
     });
 
     const json = JSON.parse(JSON.stringify(await response.json()));
-    const gitHubVersion = json.tag_name;
+    const gitHubVersion = String(json.tag_name).substring(1);
     const botVersion = getBotVersion();
     logDebug(`Bot Version:    ${botVersion}`);
     logDebug(`Github Version: ${gitHubVersion}`);
