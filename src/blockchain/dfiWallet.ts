@@ -452,15 +452,10 @@ After the cleanup I can take over again. 🧙`
       }
     });
 
-    if (interestDUSD.gt(0)) {
-      logDebug(`Interest DUSD: ${interestDUSD}`);
-    } else {
-      logDebug(`There is currently no DUSD interest.`);
-    }
+    logDebug(`Interest DUSD: ${interestDUSD}`);
 
     if (maxDUSDPayback.gt(0)) {
-      logDebug(`MaxLoan DUSD: ${maxDUSDPayback}`);
-      logDebug(`MaxLoan - Interest: ${maxDUSDPayback.plus(interestDUSD)}`);
+      logDebug(`PAYBACK MaxLoan in DUSD: ${maxDUSDPayback}`);
     } else {
       logDebug(`Couldn't find DUSD loan!`);
     }
@@ -506,13 +501,23 @@ After the cleanup I can take over again. 🧙`
     let expectedDUSD = dUSDAmount.decimalPlaces(6, BigNumber.ROUND_FLOOR);
     logDebug(`Expected dUSD Payback: (${expectedDUSD})`);
 
-    if (expectedDUSD > maxDUSDPayback.plus(interestDUSD)) {
+    // Check on negative interest
+    if (interestDUSD < new BigNumber(0)) {
       logDebug(
-        `Detected overpayment for dUSD loan -> limiting payback to maxPayBack: ${maxDUSDPayback.plus(
+        `Detected negative interest: MaxLoan - Interest = ${maxDUSDPayback.plus(
           interestDUSD
         )}`
       );
-      expectedDUSD = maxDUSDPayback.plus(interestDUSD);
+
+      // if negative interest and expected payback is larger than loan -> limit the payback
+      if (expectedDUSD > maxDUSDPayback.plus(interestDUSD)) {
+        logDebug(
+          `Detected overpayment for dUSD loan -> limiting payback to maxPayBack: ${maxDUSDPayback.plus(
+            interestDUSD
+          )}`
+        );
+        expectedDUSD = maxDUSDPayback.plus(interestDUSD);
+      }
     }
 
     logDebug(`dUSD Payback: (${expectedDUSD})`);
