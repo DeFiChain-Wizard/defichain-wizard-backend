@@ -297,6 +297,7 @@ export {
   getConfig,
   getTelegram,
   getBotName,
+  getBotVersion,
   getDFIChainConfig,
   getDFINetwork,
   getWalletAddress,
