@@ -516,7 +516,12 @@ After the cleanup I can take over again. 🧙`
             interestDUSD
           )}`
         );
+
+        // only payback maximum of loan
         expectedDUSD = maxDUSDPayback.plus(interestDUSD);
+      } else {
+        // reduce payback by negative interest
+        expectedDUSD = expectedDUSD.plus(interestDUSD);
       }
     }
 
