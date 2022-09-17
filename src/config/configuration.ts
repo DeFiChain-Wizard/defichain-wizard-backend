@@ -247,7 +247,7 @@ const setBotConfig = (
 
 I'll make sure to keep your vault ratio in this range. 🪄
 
-☝️ _Don't worry if your vault occasionally has a higher ratio than your configured maximum ratio. As a wizard I can look into the future and know when the ratio will drop.`
+☝️ _Don't worry if your vault occasionally has a higher ratio than your configured maximum ratio. As a wizard I can look into the future and know when the ratio will drop._`
     );
 
     sendMessageToTelegram(
