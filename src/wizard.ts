@@ -249,8 +249,6 @@ class Wizard {
     logDebug(`Bot Version:    ${botVersion}`);
     logDebug(`Github Version: ${gitHubVersion}`);
 
-    //const semver = new semver();
-
     if (semver.gt(gitHubVersion, botVersion)) {
       sendMessageToTelegram(`⚙️ I've found a new backend version *${gitHubVersion}*
 
