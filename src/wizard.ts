@@ -4,7 +4,8 @@ import {
   getDFINetwork,
   getSEEDFromEnv,
   getWalletAddress,
-  setBotConfig
+  setBotConfig,
+  getBotVersion
 } from './config/configuration';
 import 'dotenv/config';
 import {
@@ -27,6 +28,8 @@ import {
 } from '@defichainwizard/custom-logging';
 import { SmartInterval } from './utils/smartInterval';
 import { BigNumber } from '@defichain/jellyfish-api-core';
+import { RequestInfo, RequestInit } from 'node-fetch';
+import * as semver from 'semver';
 
 // Initially it will be 2010000 (round July 2022, before DeFiChain Wizard was released) and will change once we found the first block that contained a config
 const INITIAL_LAST_CONFIG_BLOCK = 2010000;
@@ -76,6 +79,9 @@ class Wizard {
           );
         } else {
           logInfo('New configuration found. Will update bot...');
+
+          // Compare Versions and inform user if newer version is available
+          await Wizard.compareBackendVersion();
 
           try {
             // get config
@@ -220,6 +226,37 @@ class Wizard {
   }
 
   /**
+   * This function checks if there is a new backendversion available
+   */
+
+  static async compareBackendVersion(): Promise<void> {
+    const fetch = (url: RequestInfo, init?: RequestInit) =>
+      import('node-fetch').then(({ default: fetch }) => fetch(url, init));
+
+    const url =
+      'https://api.github.com/repos/defichain-wizard/defichain-wizard-backend/releases/latest';
+
+    const response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'DeFiChain-Wizard Backend'
+      }
+    });
+
+    const json = JSON.parse(JSON.stringify(await response.json()));
+    const gitHubVersion = String(json.tag_name).substring(1);
+    const botVersion = getBotVersion();
+    logDebug(`Bot Version:    ${botVersion}`);
+    logDebug(`Github Version: ${gitHubVersion}`);
+
+    if (semver.gt(gitHubVersion, botVersion)) {
+      sendMessageToTelegram(`⚙️ I've found a new backend version *${gitHubVersion}*
+
+☝️ Please update your current backend installation.`);
+    }
+  }
+
+  /**
    * This function starts the wizard! :)
    */
   static async doYourMagic() {
@@ -236,6 +273,7 @@ If you make sure that this is the case, I will be happy to manage your vault for
 
 *DISCLAIMER*: I'm still a little wizard that has to learn things, so you might see some errors here and there. Please report them to improve my skills! 🧙`
     );
+
     logDebug('Wallet initialization started...');
     const walletRes = await tryGetAsync<DFIWallet>(() =>
       DFIWallet.build(getWalletAddress())
