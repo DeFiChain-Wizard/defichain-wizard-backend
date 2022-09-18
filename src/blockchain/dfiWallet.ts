@@ -455,7 +455,7 @@ After the cleanup I can take over again. 🧙`
     logDebug(`Interest DUSD: ${interestDUSD}`);
 
     if (maxDUSDPayback.gt(0)) {
-      logDebug(`PAYBACK MaxLoan in DUSD: ${maxDUSDPayback}`);
+      logDebug(`MaxLoan payback in DUSD: ${maxDUSDPayback}`);
     } else {
       logDebug(`Couldn't find DUSD loan!`);
     }
@@ -502,19 +502,17 @@ After the cleanup I can take over again. 🧙`
     logDebug(`Expected dUSD Payback: (${expectedDUSD})`);
 
     // Check on negative interest
-    if (interestDUSD < new BigNumber(0)) {
+    if (interestDUSD.lt(0)) {
+      const maxLoanWithoutInterest = maxDUSDPayback.plus(interestDUSD);
+
       logDebug(
-        `Detected negative interest: MaxLoan - Interest = ${maxDUSDPayback.plus(
-          interestDUSD
-        )}`
+        `Detected negative interest: MaxLoan - Interest = ${maxLoanWithoutInterest}`
       );
 
       // if negative interest and expected payback is larger than loan -> limit the payback
-      if (expectedDUSD > maxDUSDPayback.plus(interestDUSD)) {
+      if (expectedDUSD.gt(maxLoanWithoutInterest)) {
         logDebug(
-          `Detected overpayment for dUSD loan -> limiting payback to maxPayBack: ${maxDUSDPayback.plus(
-            interestDUSD
-          )}`
+          `Detected overpayment for dUSD loan -> limiting payback to maxPayBack: ${maxLoanWithoutInterest}`
         );
 
         // only payback maximum of loan
