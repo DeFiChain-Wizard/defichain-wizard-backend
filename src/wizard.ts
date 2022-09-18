@@ -228,7 +228,6 @@ class Wizard {
   /**
    * This function checks if there is a new backendversion available
    */
-
   static async compareBackendVersion(): Promise<void> {
     const fetch = (url: RequestInfo, init?: RequestInit) =>
       import('node-fetch').then(({ default: fetch }) => fetch(url, init));
