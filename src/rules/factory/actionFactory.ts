@@ -384,7 +384,7 @@ export class ActionFactory extends BaseFactory {
 
     return new ActionSet({
       name: 'DecreaseVaultRatio',
-      finishMessage: `Wow! My spell invested more 💰. You will earn more rewards once the transaction went through!`,
+      finishMessage: `Wow! My spell invested more 💰. You will earn more rewards once the transaction went through - wizardry can be slow as well, you know? `,
       actions: [decreaseVaultRatioAction],
       walletData: {
         client: this.client,

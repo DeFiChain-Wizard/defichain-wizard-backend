@@ -59,13 +59,13 @@ const sendVaultRatioToTelegram = (vault: Vault, targetRatio: number): void => {
 Current: ${currentRatio.toFixed(2)}%
 Next: ${nextRatio.toFixed(2)}%
 
-Your target ratio will be: ${
-          isFinite(targetRatio)
-            ? targetRatio.toFixed(2) + '%'
-            : "Oh wow, how does one even call this number? It's huge"
-        }.
+${
+  isFinite(targetRatio)
+    ? 'Your target ratio will be: ' + targetRatio.toFixed(2) + '%'
+    : 'Looks like your new ratio will be enormous... Are you paying back your loans? 💰'
+}.
 
-I will cast a spell now to put things into order again! Abracadabra! 🪄`
+I will cast some spells to make some magic happen! Abracadabra! 🪄`
       : `There is no vault ratio yet, which means that you don't have a loan yet.
       
 Let me see if I can do some magic here! 🪄`
