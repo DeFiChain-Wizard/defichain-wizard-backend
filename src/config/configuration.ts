@@ -182,8 +182,15 @@ const checkConfig = (
     count++;
   }
 
-  // limit the minRatio to minimum of 151%
-  if (message.rules.keepMinRatio < vaultMinCollateralRatio) {
+  // check the ratio if someone wants to payback everything:
+
+  if (message.rules.keepMaxRatio === 0 && message.rules.keepMaxRatio === 0) {
+    logDebug(
+      'Loan Payback initiated. I will increase the keepMinRatio and keepMaxRatio to Number.MAX_VALUE...'
+    );
+    returnMessage.rules.keepMaxRatio = Number.MAX_VALUE;
+    returnMessage.rules.keepMinRatio = Number.MAX_VALUE;
+  } else if (message.rules.keepMinRatio < vaultMinCollateralRatio) {
     logWarn(
       `Your min ratio (${message.rules.keepMinRatio}) was below ${vaultMinCollateralRatio}, which is too low... we set it to ${vaultMinCollateralRatio}.`
     );
@@ -242,13 +249,19 @@ const setBotConfig = (
       `Currently the Bot is put to sleep and won't do anything. Pause = ${customConfig.pause}`
     );
   } else {
-    sendMessageToTelegram(
-      `I'm going to use *${customConfig.rules.keepMinRatio}%* as minimum and *${customConfig.rules.keepMaxRatio}%* as maximum ratio.
+    if (customConfig.rules.keepMinRatio === Number.MAX_VALUE) {
+      sendMessageToTelegram(
+        `Some owl told me to payback your loan completely! One of the easiest spells I know. Let me handle that. 🪄`
+      );
+    } else {
+      sendMessageToTelegram(
+        `I'm going to use *${customConfig.rules.keepMinRatio}%* as minimum and *${customConfig.rules.keepMaxRatio}%* as maximum ratio.
 
 I'll make sure to keep your vault ratio in this range. 🪄
 
 ☝️ _Don't worry if your vault occasionally has a higher ratio than your configured maximum ratio. As a wizard I can look into the future and know when the ratio will drop._`
-    );
+      );
+    }
 
     sendMessageToTelegram(
       `*Here is your configured pool pair*:
@@ -287,7 +300,7 @@ const getBotConfig = (
 const getVersionConfig = (): Version | undefined => {
   if (versionConfig) return versionConfig;
   logErrorTelegram(
-    'Your wizard tried to find a version config, but did not find anything! Please use the DeFiChain Wizard app to configure your Wizard.'
+    "I've tried to find a version config, but I did not find anything! Please use the DeFiChain Wizard app to configure your Wizard."
   );
   return undefined;
 };
