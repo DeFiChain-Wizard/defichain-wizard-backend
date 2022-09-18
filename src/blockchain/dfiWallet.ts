@@ -512,7 +512,7 @@ After the cleanup I can take over again. 🧙`
       // if negative interest and expected payback is larger than loan -> limit the payback
       if (expectedDUSD.gt(maxLoanWithoutInterest)) {
         logDebug(
-          `Detected overpayment for dUSD loan -> limiting payback to maxPayBack: ${maxLoanWithoutInterest}`
+          `Detected over-payment for dUSD loan -> limiting payback to maxPayBack: ${maxLoanWithoutInterest}`
         );
 
         // only payback maximum of loan
