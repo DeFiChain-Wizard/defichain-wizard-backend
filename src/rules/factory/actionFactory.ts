@@ -384,7 +384,7 @@ export class ActionFactory extends BaseFactory {
 
     return new ActionSet({
       name: 'DecreaseVaultRatio',
-      finishMessage: `Wow! My spell invested more 💰. You will earn more rewards once the transaction went through!`,
+      finishMessage: `Wow! My spell invested more 💰. You will earn more rewards once the transaction went through - wizardry can be slow as well, you know? `,
       actions: [decreaseVaultRatioAction],
       walletData: {
         client: this.client,
@@ -450,8 +450,8 @@ export class ActionFactory extends BaseFactory {
           vault.getVaultLoanSchemePercentage() +
             ConstantValues.additionalVaultRatioSafety
         ) {
-          logWarn(
-            `Currently the configured vault ratio can't be reached. There is not enough liquidity available. As we are save we don't send any notification.`
+          logDebug(
+            `Currently the configured vault ratio can't be reached. There is not enough liquidity available. This is not a problem - as we are save we don't send any notification.`
           );
           // do not send a telegram report
           finishMessage = `n/a`;
