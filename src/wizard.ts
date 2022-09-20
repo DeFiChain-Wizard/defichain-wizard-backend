@@ -14,31 +14,33 @@ import {
   sendMessageToTelegram,
   tryGetAsync
 } from './utils/helpers';
+import { ConstantValues } from './interfaces';
 import {
   BlockScanner,
   CustomMessage,
   Transaction
 } from '@defichainwizard/custom-transactions';
+import { Block } from '@defichain/whale-api-client/dist/api/blocks';
 import { RuleFactory } from './rules/factory';
-import {
-  logDebug,
-  logError,
-  logInfo,
-  logConfig
-} from '@defichainwizard/custom-logging';
+import { logDebug, logError, logInfo } from '@defichainwizard/custom-logging';
 import { SmartInterval } from './utils/smartInterval';
 import { BigNumber } from '@defichain/jellyfish-api-core';
 import { RequestInfo, RequestInit } from 'node-fetch';
 import * as semver from 'semver';
 
-// Initially it will be 2010000 (round July 2022, before DeFiChain Wizard was released) and will change once we found the first block that contained a config
-const INITIAL_LAST_CONFIG_BLOCK = 2010000;
 class Wizard {
   // store the current block here
   private static lastBlockHeight = 0;
-  private static lastConfigBlock = INITIAL_LAST_CONFIG_BLOCK;
+  private static lastConfigBlock = ConstantValues.initialLastConfigBlock;
   private static lastConfigBlockTime = 0;
-  private static pauseHasElapsedMessageSent = false;
+  private static wizardStart = true;
+  private static messageHasNotBeenSent = {
+    botInactive: false,
+    botSleeping: false,
+    botActive: false,
+    vaultIsEmpty: false,
+    noConfigSent: true
+  };
   /**
    * This is where the actual magic happens... :)
    *
@@ -83,20 +85,16 @@ class Wizard {
           // Compare Versions and inform user if newer version is available
           await Wizard.compareBackendVersion();
 
+          // if we have a new config: reset all message counters
+          Wizard.messageHasNotBeenSent = {
+            botActive: true,
+            botSleeping: true,
+            botInactive: true,
+            vaultIsEmpty: true,
+            noConfigSent: true
+          };
+
           try {
-            // get config
-            let oldPause = 0;
-
-            logDebug(`Old Config:`);
-
-            const config = getBotConfig();
-            if (config) {
-              logDebug(config);
-              oldPause = config.pause;
-            } else {
-              oldPause = 0;
-            }
-
             // new config
             const message = transaction.getCustomMessage(
               wizardTransaction.message
@@ -108,20 +106,33 @@ class Wizard {
 
             Wizard.lastConfigBlock = wizardTransaction.lastConfigBlock;
             Wizard.lastConfigBlockTime = wizardTransaction.blockTime;
-            Wizard.pauseHasElapsedMessageSent = false;
 
-            if (oldPause == -1 && ConfigMessage.pause >= 0) {
-              sendMessageToTelegram(
-                `✅ My break is over! Now I'll take care of your vault again. 👍`
-              );
-            } else if (ConfigMessage.pause > 0) {
-              sendMessageToTelegram(
-                `⏸ Ok, time to rest for me. I'll stop guarding your vault for the next ${ConfigMessage.pause} minutes.`
-              );
-            } else if (ConfigMessage.pause == -1) {
-              sendMessageToTelegram(
-                `🚨 You have put me to sleep. I'll not take any actions until you wake me up again. Looking forward to do some magic for you again. 🪄`
-              );
+            // Inform user about pause status: botInactive or botSleeping for x minutes
+            const pauseActive = Wizard.sendPauseMessage(
+              ConfigMessage,
+              currentBlock
+            );
+            if (pauseActive) return;
+
+            // check if vault is empty
+            if (vault.getVaultState() === 'EMPTY') {
+              logDebug(`The vault is in state EMPTY. we can't operate`);
+              if (
+                (ConfigMessage.compounding.mode == 1 ||
+                  ConfigMessage.compounding.mode === 3) &&
+                Wizard.messageHasNotBeenSent.vaultIsEmpty
+              ) {
+                sendMessageToTelegram(
+                  `🔔 It seems your vault is currently EMPTY. 
+
+The compounding feature is not configured to automatically add collateral to your vault. 
+
+Please add it manually to get started.`
+                );
+
+                Wizard.messageHasNotBeenSent.vaultIsEmpty = false;
+                return;
+              }
             }
           } catch (e) {
             logError(
@@ -130,35 +141,56 @@ class Wizard {
           }
         }
 
-        // get config again - this time as bot config
-        const config = getBotConfig(true);
-        // check if config was found OR config pause is set to -1
-        if (typeof config !== 'undefined' && config.pause >= 0) {
-          // If Pause is > 0 we will wait for the configured number in minutes
-          if (config.pause > 0) {
-            const waitTill = Wizard.lastConfigBlockTime + config.pause * 60;
-            const now = currentBlock.time;
-            logDebug(`Pause configured till ${waitTill} now is ${now}`);
+        // get config - this time as bot config
+        const config = getBotConfig(Wizard.messageHasNotBeenSent.noConfigSent);
 
-            if (waitTill > now) {
-              logInfo('Doing nothing: User configured Pause');
-              return;
+        if (config === undefined) {
+          Wizard.messageHasNotBeenSent.noConfigSent = false;
+          return;
+        }
+
+        // check if config was found and config pause is not set to -1
+        if (typeof config !== 'undefined' && config.pause >= 0) {
+          // Pause is configured -> calculate end time of pause
+          const waitTill = Wizard.lastConfigBlockTime + config.pause * 60;
+          const minutesBeforReactivation =
+            (waitTill - currentBlock.time) / 60 > config.pause
+              ? config.pause
+              : (waitTill - currentBlock.time) / 60;
+          const pauseHasElapsed = currentBlock.time >= waitTill ? true : false;
+
+          if (!pauseHasElapsed && config.pause > 0) {
+            const minutesString = `${minutesBeforReactivation.toFixed(1)}/${
+              config.pause
+            }`;
+
+            if (Wizard.messageHasNotBeenSent.botSleeping) {
+              Wizard.sendSleepingMessage(minutesString);
             } else {
               logDebug(
-                `Pause was configured, but is already elapsed (${Wizard.pauseHasElapsedMessageSent})`
+                `The Wizard will not guard for the next ${minutesString} minutes.`
               );
-
-              if (!Wizard.pauseHasElapsedMessageSent) {
-                sendMessageToTelegram(
-                  `✅ My break is over! Now I'll take care of your vault again 👍`
-                );
-                Wizard.pauseHasElapsedMessageSent = true;
-              }
             }
+            Wizard.wizardStart = false;
+
+            return;
           }
-          // now we have checked for a new config... let's run some rules if needed
-          logDebug('Current config:');
-          logConfig(config);
+
+          if (Wizard.messageHasNotBeenSent.botActive) {
+            if (!Wizard.wizardStart) {
+              sendMessageToTelegram(
+                `✅ My break is over! Now I'll take care of your vault again 👍`
+              );
+            }
+            Wizard.messageHasNotBeenSent = {
+              botActive: false,
+              botInactive: true,
+              botSleeping: true,
+              vaultIsEmpty: Wizard.messageHasNotBeenSent.vaultIsEmpty,
+              noConfigSent: Wizard.messageHasNotBeenSent.noConfigSent
+            };
+          }
+          Wizard.wizardStart = false;
 
           // create the rule factory
           const ruleFactory = new RuleFactory(wallet, config.vaultId);
@@ -204,7 +236,13 @@ class Wizard {
           );
         }
       } else {
-        const config = getBotConfig(true);
+        const config = getBotConfig(Wizard.messageHasNotBeenSent.noConfigSent);
+
+        if (config === undefined) {
+          Wizard.messageHasNotBeenSent.noConfigSent = false;
+          return;
+        }
+
         let currentVaultRatio = new BigNumber(0);
         let nextVaultRatio = new BigNumber(0);
 
@@ -212,8 +250,8 @@ class Wizard {
           const vault = await wallet.getVault(config?.vaultId);
           currentVaultRatio = vault
             .getCurrentCollateralRatio()
-            .decimalPlaces(2);
-          nextVaultRatio = vault.getNextCollateralRatio().decimalPlaces(2);
+            .decimalPlaces(3);
+          nextVaultRatio = vault.getNextCollateralRatio().decimalPlaces(3);
         }
 
         logDebug(
@@ -223,6 +261,74 @@ class Wizard {
     } catch (e) {
       logError(`Something went wrong in Main loop: ${e}`);
     }
+
+    Wizard.wizardStart = false;
+  }
+
+  /**
+   * This method sends an initial confirmation about the "Pause State" to the user
+   *
+   * @param ConfigMessage The configuration message that defines in which state the pause is
+   * @param currentBlock The current block for time calculations
+   */
+  static sendPauseMessage(
+    ConfigMessage: CustomMessage,
+    currentBlock: Block
+  ): boolean {
+    if (ConfigMessage.pause == -1 && Wizard.messageHasNotBeenSent.botInactive) {
+      logDebug(
+        `The Wizard is set to INACTIVE state. Pause: ${ConfigMessage.pause}`
+      );
+      sendMessageToTelegram(
+        `🚨 You have put me to sleep. I'll not take any actions until you wake me up again. Looking forward to do some magic for you again. 🪄`
+      );
+      // BotInactive Message has been send -> store it to not repeat it
+      Wizard.messageHasNotBeenSent.botInactive = false;
+    } else if (
+      ConfigMessage.pause > 0 &&
+      Wizard.messageHasNotBeenSent.botSleeping
+    ) {
+      // Pause is configured -> calculate end time of pause
+      const waitTill = Wizard.lastConfigBlockTime + ConfigMessage.pause * 60;
+      const pauseHasElapsed = currentBlock.time >= waitTill ? true : false;
+
+      if (!pauseHasElapsed) {
+        // LastConfigBlockTime is sometimes not correct -> use max wait
+        const minutesBeforReactivation =
+          (waitTill - currentBlock.time) / 60 > ConfigMessage.pause
+            ? ConfigMessage.pause
+            : (waitTill - currentBlock.time) / 60;
+        const minutesString = `${minutesBeforReactivation.toFixed(1)}/${
+          ConfigMessage.pause
+        }`;
+
+        Wizard.sendSleepingMessage(minutesString);
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+
+    // Inactivity or Sleeping Message has been send -> remove sent flag from Active message
+    Wizard.messageHasNotBeenSent.botActive = true;
+
+    // Remember that start routine is over
+    Wizard.wizardStart = false;
+    return true;
+  }
+
+  static sendSleepingMessage(minutesString: string): void {
+    logDebug(
+      `The Wizard will not guard for the next ${minutesString} minutes.`
+    );
+
+    sendMessageToTelegram(
+      `⏸ Ok, it's time to rest. I'll stop guarding your vault for the next ${minutesString} minutes.`
+    );
+
+    Wizard.messageHasNotBeenSent.botSleeping = false;
+    Wizard.messageHasNotBeenSent.botActive = true;
   }
 
   /**
@@ -248,10 +354,12 @@ class Wizard {
     logDebug(`Bot Version:    ${botVersion}`);
     logDebug(`Github Version: ${gitHubVersion}`);
 
-    if (semver.gt(gitHubVersion, botVersion)) {
+    if (semver.neq(gitHubVersion, botVersion)) {
       sendMessageToTelegram(`⚙️ I've found a new backend version *${gitHubVersion}*
 
-☝️ Please update your current backend installation.`);
+☝️ Please update your bot on the server. Your current version is *${botVersion}*
+
+https://youtu.be/1mW6MGr1Egg`);
     }
   }
 
