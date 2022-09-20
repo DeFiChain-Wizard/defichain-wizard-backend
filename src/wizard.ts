@@ -71,7 +71,9 @@ class Wizard {
         );
 
         const wizardTransaction =
-          await blockScanner.findLastWizardConfiguration(Wizard.lastConfigBlock);
+          await blockScanner.findLastWizardConfiguration(
+            Wizard.lastConfigBlock
+          );
 
         if (!wizardTransaction) {
           logDebug(
@@ -355,7 +357,9 @@ Please add it manually to get started.`
     if (semver.gt(gitHubVersion, botVersion)) {
       sendMessageToTelegram(`⚙️ I've found a new backend version *${gitHubVersion}*
 
-☝️ Please update your current backend installation.`);
+☝️ Please update your bot on the server.
+
+https://youtu.be/1mW6MGr1Egg`);
     }
   }
 
