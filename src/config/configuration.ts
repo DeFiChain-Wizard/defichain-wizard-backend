@@ -281,12 +281,12 @@ ${Object.keys(customConfig.poolpairs)
  * @returns the bot config
  */
 const getBotConfig = (
-  sendMissingConfigInfoToTelegram?: boolean
+  messageHasNotBeenSent: boolean
 ): CustomMessage | undefined => {
   if (botConfig) return botConfig;
   // don't send it to the user via Telegram
-  if (sendMissingConfigInfoToTelegram) {
-    logErrorTelegram(
+  if (messageHasNotBeenSent) {
+    sendMessageToTelegram(
       "⚠️ Ouch, I've tried to find a bot config, but did not find any! But that's easy to fix: Please download and use the DeFiChain Wizard app to configure your Wizard."
     );
   }

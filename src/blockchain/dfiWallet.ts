@@ -515,8 +515,8 @@ After the cleanup I can take over again. 🧙`
           `Detected over-payment for dUSD loan -> limiting payback to maxPayBack: ${maxLoanWithoutInterest}`
         );
 
-        // only payback maximum of loan
-        expectedDUSD = maxDUSDPayback.plus(interestDUSD);
+        // only payback maximum of loan - add small buffer in order to deal with interest that could occur during calculation
+        expectedDUSD = maxDUSDPayback.plus(interestDUSD).times(0.98);
       } else {
         // reduce payback by negative interest
         expectedDUSD = expectedDUSD.plus(interestDUSD);
