@@ -59,32 +59,32 @@ class Wizard {
       const currentBlockHeight = await blockScanner.getBlockHeight();
 
       // only do some magic when a new block has been found - no need to do it on the same block again
-      if (currentBlockHeight !== this.lastBlockHeight) {
+      if (currentBlockHeight !== Wizard.lastBlockHeight) {
         logInfo(
           `New block found (${currentBlockHeight}), will start the analysis now...`
         );
         // store current height so we don't check the same block again
-        this.lastBlockHeight = currentBlockHeight;
+        Wizard.lastBlockHeight = currentBlockHeight;
 
         logDebug(
           'Checking if there is a new configuration on the blockchain...'
         );
 
         const wizardTransaction =
-          await blockScanner.findLastWizardConfiguration(this.lastConfigBlock);
+          await blockScanner.findLastWizardConfiguration(Wizard.lastConfigBlock);
 
         if (!wizardTransaction) {
           logDebug(
-            `No (new) config found on blockchain, since last block "${this.lastConfigBlock}"...`
+            `No (new) config found on blockchain, since last block "${Wizard.lastConfigBlock}"...`
           );
         } else {
           logInfo('New configuration found. Will update bot...');
 
           // Compare Versions and inform user if newer version is available
-          await this.compareBackendVersion();
+          await Wizard.compareBackendVersion();
 
           // if we have a new config: reset all message counters
-          this.messageHasNotBeenSent = {
+          Wizard.messageHasNotBeenSent = {
             botActive: true,
             botSleeping: true,
             botInactive: true,
@@ -102,11 +102,11 @@ class Wizard {
             const vault = await wallet.getVault(ConfigMessage.vaultId);
             setBotConfig(message, vault.getVaultLoanSchemePercentage());
 
-            this.lastConfigBlock = wizardTransaction.lastConfigBlock;
-            this.lastConfigBlockTime = wizardTransaction.blockTime;
+            Wizard.lastConfigBlock = wizardTransaction.lastConfigBlock;
+            Wizard.lastConfigBlockTime = wizardTransaction.blockTime;
 
             // Inform user about pause status: botInactive or botSleeping for x minutes
-            const pauseActive = this.sendPauseMessage(
+            const pauseActive = Wizard.sendPauseMessage(
               ConfigMessage,
               currentBlock
             );
@@ -118,7 +118,7 @@ class Wizard {
               if (
                 (ConfigMessage.compounding.mode == 1 ||
                   ConfigMessage.compounding.mode === 3) &&
-                this.messageHasNotBeenSent.vaultIsEmpty
+                Wizard.messageHasNotBeenSent.vaultIsEmpty
               ) {
                 sendMessageToTelegram(
                   `🔔 It seems your vault is currently EMPTY. 
@@ -128,7 +128,7 @@ The compounding feature is not configured to automatically add collateral to you
 Please add it manually to get started.`
                 );
 
-                this.messageHasNotBeenSent.vaultIsEmpty = false;
+                Wizard.messageHasNotBeenSent.vaultIsEmpty = false;
                 return;
               }
             }
@@ -140,17 +140,17 @@ Please add it manually to get started.`
         }
 
         // get config - this time as bot config
-        const config = getBotConfig(this.messageHasNotBeenSent.noConfigSent);
+        const config = getBotConfig(Wizard.messageHasNotBeenSent.noConfigSent);
 
         if (config === undefined) {
-          this.messageHasNotBeenSent.noConfigSent = false;
+          Wizard.messageHasNotBeenSent.noConfigSent = false;
           return;
         }
 
         // check if config was found and config pause is not set to -1
         if (typeof config !== 'undefined' && config.pause >= 0) {
           // Pause is configured -> calculate end time of pause
-          const waitTill = this.lastConfigBlockTime + config.pause * 60;
+          const waitTill = Wizard.lastConfigBlockTime + config.pause * 60;
           const minutesBeforReactivation =
             (waitTill - currentBlock.time) / 60 > config.pause
               ? config.pause
@@ -162,33 +162,33 @@ Please add it manually to get started.`
               config.pause
             }`;
 
-            if (this.messageHasNotBeenSent.botSleeping) {
-              this.sendSleepingMessage(minutesString);
+            if (Wizard.messageHasNotBeenSent.botSleeping) {
+              Wizard.sendSleepingMessage(minutesString);
             } else {
               logDebug(
                 `The Wizard will not guard for the next ${minutesString} minutes.`
               );
             }
-            this.wizardStart = false;
+            Wizard.wizardStart = false;
 
             return;
           }
 
-          if (this.messageHasNotBeenSent.botActive) {
-            if (!this.wizardStart) {
+          if (Wizard.messageHasNotBeenSent.botActive) {
+            if (!Wizard.wizardStart) {
               sendMessageToTelegram(
                 `✅ My break is over! Now I'll take care of your vault again 👍`
               );
             }
-            this.messageHasNotBeenSent = {
+            Wizard.messageHasNotBeenSent = {
               botActive: false,
               botInactive: true,
               botSleeping: true,
-              vaultIsEmpty: this.messageHasNotBeenSent.vaultIsEmpty,
-              noConfigSent: this.messageHasNotBeenSent.noConfigSent
+              vaultIsEmpty: Wizard.messageHasNotBeenSent.vaultIsEmpty,
+              noConfigSent: Wizard.messageHasNotBeenSent.noConfigSent
             };
           }
-          this.wizardStart = false;
+          Wizard.wizardStart = false;
 
           // create the rule factory
           const ruleFactory = new RuleFactory(wallet, config.vaultId);
@@ -221,7 +221,7 @@ Please add it manually to get started.`
               );
 
               // make sure that we really wair - even if there where new blocks while processing
-              this.lastBlockHeight = await blockScanner.getBlockHeight();
+              Wizard.lastBlockHeight = await blockScanner.getBlockHeight();
 
               return;
             }
@@ -234,10 +234,10 @@ Please add it manually to get started.`
           );
         }
       } else {
-        const config = getBotConfig(this.messageHasNotBeenSent.noConfigSent);
+        const config = getBotConfig(Wizard.messageHasNotBeenSent.noConfigSent);
 
         if (config === undefined) {
-          this.messageHasNotBeenSent.noConfigSent = false;
+          Wizard.messageHasNotBeenSent.noConfigSent = false;
           return;
         }
 
@@ -260,7 +260,7 @@ Please add it manually to get started.`
       logError(`Something went wrong in Main loop: ${e}`);
     }
 
-    this.wizardStart = false;
+    Wizard.wizardStart = false;
   }
 
   /**
@@ -273,7 +273,7 @@ Please add it manually to get started.`
     ConfigMessage: CustomMessage,
     currentBlock: Block
   ): boolean {
-    if (ConfigMessage.pause == -1 && this.messageHasNotBeenSent.botInactive) {
+    if (ConfigMessage.pause == -1 && Wizard.messageHasNotBeenSent.botInactive) {
       logDebug(
         `The Wizard is set to INACTIVE state. Pause: ${ConfigMessage.pause}`
       );
@@ -281,13 +281,13 @@ Please add it manually to get started.`
         `🚨 You have put me to sleep. I'll not take any actions until you wake me up again. Looking forward to do some magic for you again. 🪄`
       );
       // BotInactive Message has been send -> store it to not repeat it
-      this.messageHasNotBeenSent.botInactive = false;
+      Wizard.messageHasNotBeenSent.botInactive = false;
     } else if (
       ConfigMessage.pause > 0 &&
-      this.messageHasNotBeenSent.botSleeping
+      Wizard.messageHasNotBeenSent.botSleeping
     ) {
       // Pause is configured -> calculate end time of pause
-      const waitTill = this.lastConfigBlockTime + ConfigMessage.pause * 60;
+      const waitTill = Wizard.lastConfigBlockTime + ConfigMessage.pause * 60;
       const pauseHasElapsed = currentBlock.time >= waitTill ? true : false;
 
       if (!pauseHasElapsed) {
@@ -300,7 +300,7 @@ Please add it manually to get started.`
           ConfigMessage.pause
         }`;
 
-        this.sendSleepingMessage(minutesString);
+        Wizard.sendSleepingMessage(minutesString);
       } else {
         return false;
       }
@@ -309,10 +309,10 @@ Please add it manually to get started.`
     }
 
     // Inactivity or Sleeping Message has been send -> remove sent flag from Active message
-    this.messageHasNotBeenSent.botActive = true;
+    Wizard.messageHasNotBeenSent.botActive = true;
 
     // Remember that start routine is over
-    this.wizardStart = false;
+    Wizard.wizardStart = false;
     return true;
   }
 
@@ -325,8 +325,8 @@ Please add it manually to get started.`
       `⏸ Ok, it's time to rest. I'll stop guarding your vault for the next ${minutesString} minutes.`
     );
 
-    this.messageHasNotBeenSent.botSleeping = false;
-    this.messageHasNotBeenSent.botActive = true;
+    Wizard.messageHasNotBeenSent.botSleeping = false;
+    Wizard.messageHasNotBeenSent.botActive = true;
   }
 
   /**
