@@ -1,5 +1,6 @@
 import { WhaleApiClient } from '@defichain/whale-api-client';
 import { logDebug } from '@defichainwizard/custom-logging';
+import { BlockScanner } from '@defichainwizard/custom-transactions';
 import { Vault } from '../../blockchain';
 import { ActionReturn, PreviousOuts } from '../../interfaces';
 import { logErrorTelegram, sendMessageToTelegram } from '../../utils/helpers';
@@ -8,6 +9,7 @@ import { Action } from './action';
 interface WalletData {
   client: WhaleApiClient;
   vaultId: string;
+  blockScanner: BlockScanner;
 }
 /**
  * The base class for an action set.
@@ -33,10 +35,11 @@ export class ActionSet {
   getVaultRatios = async () => {
     const vault = await Vault.build(
       this.walletData.client,
-      this.walletData.vaultId
+      this.walletData.vaultId,
+      this.walletData.blockScanner
     );
     return {
-      next: vault.getNextCollateralRatio().toNumber().toFixed(2),
+      next: (await vault.getNextCollateralRatio()).toNumber().toFixed(2),
       current: vault.getCurrentCollateralRatio().toNumber().toFixed(2)
     };
   };

@@ -15,7 +15,10 @@ import {
 } from '@defichain/jellyfish-transaction';
 import { Prevout } from '@defichain/jellyfish-transaction-builder/dist/provider';
 import { ActivePrice } from '@defichain/whale-api-client/dist/api/prices';
-import { Transaction } from '@defichainwizard/custom-transactions';
+import {
+  BlockScanner,
+  Transaction
+} from '@defichainwizard/custom-transactions';
 import { logDebug, logInfo } from '@defichainwizard/custom-logging';
 import { logErrorTelegram } from '../utils/helpers';
 
@@ -26,18 +29,33 @@ class DFIWallet {
   private readonly client: WhaleApiClient;
   private readonly walletProvider: WalletProvider;
   private readonly wallet: Wallet;
+  private readonly blockScanner: BlockScanner;
 
-  private constructor() {
+  private constructor(walletAddress: string) {
     try {
       logInfo('Initializing wallet.');
       this.walletProvider = new WalletProvider();
       this.client = this.walletProvider.getClient();
       this.wallet = new WalletProvider().getWallet(getSEEDFromEnv());
+      this.blockScanner = new BlockScanner({
+        client: this.client,
+        address: walletAddress
+      });
+
       logInfo('Wallet successfully initialized!');
     } catch (e) {
       logErrorTelegram('Wallet initialization failed!');
       throw e;
     }
+  }
+
+  /**
+   * Returns Blockscanner Object
+   *
+   * @returns The Blockscanner Object
+   */
+  public getBlockScanner() {
+    return this.blockScanner;
   }
 
   /**
@@ -47,8 +65,11 @@ class DFIWallet {
    * @returns The DFIWallet object
    */
   public static async build(walletAddress: string): Promise<DFIWallet> {
-    const wallet = new DFIWallet();
+    // Initialize BlockScanner with config
+
+    const wallet = new DFIWallet(walletAddress);
     await wallet.setAccount(walletAddress);
+
     return wallet;
   }
   /**
@@ -222,14 +243,16 @@ class DFIWallet {
 
     // calculate next loan value and next collateral value
     const nextLoanValue = vault.getNextLoanValue();
-    const nextCollateralValue = vault.getNextCollateralValue();
+    const nextCollateralValue = await vault.getNextCollateralValue();
 
     // take minimum from next or current collateral value
     const totalLoanToTake = BigNumber.min(
       new BigNumber(vault.loanVault.collateralValue)
         .div(ratioDivider)
         .minus(vault.loanVault.loanValue),
-      new BigNumber(nextCollateralValue).div(ratioDivider).minus(nextLoanValue)
+      new BigNumber(await nextCollateralValue)
+        .div(ratioDivider)
+        .minus(nextLoanValue)
     ).decimalPlaces(6, BigNumber.ROUND_FLOOR);
 
     logDebug(
@@ -239,7 +262,7 @@ class DFIWallet {
     );
 
     logDebug(
-      `Take next collateral: ${new BigNumber(nextCollateralValue)
+      `Take next collateral: ${new BigNumber(await nextCollateralValue)
         .div(ratioDivider)
         .minus(nextLoanValue)}`
     );
@@ -327,7 +350,7 @@ class DFIWallet {
 
     const vault = await this.getVault(vaultAddress);
     const nextLoanValue = vault.getNextLoanValue();
-    const nextCollateralValue = vault.getNextCollateralValue();
+    const nextCollateralValue = await vault.getNextCollateralValue();
     const totalRequiredPayback = BigNumber.max(
       new BigNumber(vault.loanVault.loanValue).minus(
         new BigNumber(vault.loanVault.collateralValue).dividedBy(ratioDivider)
@@ -573,7 +596,7 @@ After the cleanup I can take over again. 🧙`
    * @returns
    */
   async getVault(address: string): Promise<Vault> {
-    return await Vault.build(this.client, address);
+    return await Vault.build(this.client, address, this.blockScanner);
   }
 
   /**

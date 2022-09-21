@@ -94,7 +94,9 @@ export type PreviousOuts = Prevout | Prevout[] | undefined;
 export enum ConstantValues {
   minimumUTXOAmount = 0.1,
   additionalVaultRatioSafety = 100, // this has to be reached by paying back all LM Tokens to pass the safety check
-  initialLastConfigBlock = 2010000 // Initially it will be 2010000 (round July 2022, before DeFiChain Wizard was released) and will change once we found the first block that contained a config
+  initialLastConfigBlock = 2010000, // Initially it will be 2010000 (round July 2022, before DeFiChain Wizard was released) and will change once we found the first block that contained a config
+  dUSDCollateralIncreaseBlock = 2257500, // FCE Update brings 120% dUSD Collateral Value
+  dUSDCollateralValueFCE = 1.2
 }
 export interface ActionReturn {
   hasTxSent: boolean;

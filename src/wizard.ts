@@ -16,7 +16,6 @@ import {
 } from './utils/helpers';
 import { ConstantValues } from './interfaces';
 import {
-  BlockScanner,
   CustomMessage,
   Transaction
 } from '@defichainwizard/custom-transactions';
@@ -49,22 +48,18 @@ class Wizard {
    * @param blockScanner The block scanner object that scans the blockchain
    * @param transaction The transaction utility to read the transactions
    */
-  private static async doMagic(
-    blockScanner: BlockScanner,
-    transaction: Transaction,
-    wallet: DFIWallet
-  ) {
+  private static async doMagic(transaction: Transaction, wallet: DFIWallet) {
     try {
+      const blockScanner = wallet.getBlockScanner();
       const currentBlock = await blockScanner.getCurrentBlock();
-      const currentBlockHeight = await blockScanner.getBlockHeight();
 
       // only do some magic when a new block has been found - no need to do it on the same block again
-      if (currentBlockHeight !== Wizard.lastBlockHeight) {
+      if (currentBlock.height !== Wizard.lastBlockHeight) {
         logInfo(
-          `New block found (${currentBlockHeight}), will start the analysis now...`
+          `New block found (${currentBlock.height}), will start the analysis now...`
         );
         // store current height so we don't check the same block again
-        Wizard.lastBlockHeight = currentBlockHeight;
+        Wizard.lastBlockHeight = currentBlock.height;
 
         logDebug(
           'Checking if there is a new configuration on the blockchain...'
@@ -251,11 +246,13 @@ Please add it manually to get started.`
           currentVaultRatio = vault
             .getCurrentCollateralRatio()
             .decimalPlaces(3);
-          nextVaultRatio = vault.getNextCollateralRatio().decimalPlaces(3);
+          nextVaultRatio = (await vault.getNextCollateralRatio()).decimalPlaces(
+            3
+          );
         }
 
         logDebug(
-          `Last checked block: ${currentBlockHeight} - Vault Ratio Current: ${currentVaultRatio}% => Next: ${nextVaultRatio}%`
+          `Last checked block: ${currentBlock.height} - Vault Ratio Current: ${currentVaultRatio}% => Next: ${nextVaultRatio}%`
         );
       }
     } catch (e) {
@@ -400,12 +397,6 @@ If you make sure that this is the case, I will be happy to manage your vault for
     // print some wallet info at startup
     printWalletInfo(myWallet);
 
-    // Initialize BlockScanner with config
-    const blockScanner = new BlockScanner({
-      client: myWallet.getClient(),
-      address: await myWallet.getAddress()
-    });
-
     // Initialize Transaction with config
     const transaction = new Transaction({
       client: myWallet.getClient(),
@@ -419,7 +410,7 @@ If you make sure that this is the case, I will be happy to manage your vault for
     );
     // start and run our magic loop
     const interval = new SmartInterval(
-      () => Wizard.doMagic(blockScanner, transaction, myWallet),
+      () => Wizard.doMagic(transaction, myWallet),
       10000
     );
     interval.start();
