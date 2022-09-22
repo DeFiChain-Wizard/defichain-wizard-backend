@@ -90,12 +90,19 @@ class Wizard {
           };
 
           try {
-            // new config
+            // find new config
             const message = transaction.getCustomMessage(
               wizardTransaction.message
             );
 
             const ConfigMessage = message as CustomMessage;
+
+            // if ther was no pause configured in the previous configuration: don't send botActive Message
+            const config = getBotConfig(false);
+            if (config && config.pause === 0) {
+              Wizard.messageHasNotBeenSent.botActive = false;
+            }
+
             const vault = await wallet.getVault(ConfigMessage.vaultId);
             setBotConfig(message, vault.getVaultLoanSchemePercentage());
 
