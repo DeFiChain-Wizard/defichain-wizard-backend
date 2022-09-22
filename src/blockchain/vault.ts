@@ -4,10 +4,11 @@ import {
   LoanVaultLiquidated,
   LoanVaultTokenAmount
 } from '@defichain/whale-api-client/dist/api/loan';
-import { CollateralToken, VaultState } from '../interfaces';
+import { CollateralToken, ConstantValues, VaultState } from '../interfaces';
 import { BigNumber } from '@defichain/jellyfish-api-core';
 import { logErrorTelegram } from '../utils/helpers';
 import { logError } from '@defichainwizard/custom-logging';
+import { BlockScanner } from '@defichainwizard/custom-transactions';
 
 /**
  * The Vault implementation that offers all operations on the vault.
@@ -15,13 +16,19 @@ import { logError } from '@defichainwizard/custom-logging';
 class Vault {
   private readonly client: WhaleApiClient;
   private readonly vaultAddress: string;
+  private readonly blockScanner: BlockScanner;
 
   // @ts-expect-error TS2564: Property '_loanVault' has no initializer and is not definitely assigned in the constructor.
   // This is expected, but no problem, as we init _loanVault in the static build method, which is the only way to create a new Vault object
   private _loanVault: LoanVaultActive;
-  private constructor(client: WhaleApiClient, vaultAddress: string) {
+  private constructor(
+    client: WhaleApiClient,
+    vaultAddress: string,
+    blockScanner: BlockScanner
+  ) {
     this.client = client;
     this.vaultAddress = vaultAddress;
+    this.blockScanner = blockScanner;
   }
 
   /**
@@ -33,9 +40,10 @@ class Vault {
    */
   public static async build(
     client: WhaleApiClient,
-    vaultAddress: string
+    vaultAddress: string,
+    blockScanner: BlockScanner
   ): Promise<Vault> {
-    const vault = new Vault(client, vaultAddress);
+    const vault = new Vault(client, vaultAddress, blockScanner);
     await vault.setLoanVault();
     return vault;
   }
@@ -95,13 +103,26 @@ class Vault {
    *
    * @returns Next Collateral Value
    */
-  public getNextCollateralValue(): BigNumber {
+  public async getNextCollateralValue(): Promise<BigNumber> {
+    const currentBlockHeight = await this.blockScanner.getBlockHeight();
+
+    let USDCollateralValue = 0.0;
+
+    // using: "if-immediate" for performance purposes
+    if (currentBlockHeight < ConstantValues.dUSDCollateralIncreaseBlock) {
+      USDCollateralValue = 0.99;
+    } else if (
+      currentBlockHeight >= ConstantValues.dUSDCollateralIncreaseBlock
+    ) {
+      USDCollateralValue = ConstantValues.dUSDCollateralValueFCE;
+    }
+
     return this._loanVault.collateralAmounts.reduce(
       (collateralSum: BigNumber, collateral: LoanVaultTokenAmount) =>
         collateralSum.plus(
           new BigNumber(collateral.amount).multipliedBy(
             collateral.activePrice?.next?.amount ??
-              (collateral.symbol === 'DUSD' ? 0.99 : 0)
+              (collateral.symbol === 'DUSD' ? USDCollateralValue : 0)
           )
         ),
       new BigNumber(0)
@@ -130,8 +151,8 @@ class Vault {
    *
    * @returns Next Collateral Ratio in percent
    */
-  public getNextCollateralRatio(): BigNumber {
-    return this.getNextCollateralValue()
+  public async getNextCollateralRatio(): Promise<BigNumber> {
+    return (await this.getNextCollateralValue())
       .dividedBy(this.getNextLoanValue())
       .multipliedBy(100);
   }

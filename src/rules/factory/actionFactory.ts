@@ -104,9 +104,7 @@ export class ActionFactory extends BaseFactory {
         address: await this.wallet.getAddress()
       });
       await myBlockScanner.waitForNextBlock(
-        (
-          await myBlockScanner.getCurrentBlock()
-        ).height
+        (await myBlockScanner.getCurrentBlock()).height + 1
       );
 
       return {
@@ -238,7 +236,8 @@ export class ActionFactory extends BaseFactory {
           actions: [],
           walletData: {
             client: this.client,
-            vaultId: this.vaultId
+            vaultId: this.vaultId,
+            blockScanner: this.wallet.getBlockScanner()
           }
         });
       }
@@ -250,7 +249,8 @@ export class ActionFactory extends BaseFactory {
           actions: [this.getAddCollateralAction('DFI', 8)],
           walletData: {
             client: this.client,
-            vaultId: this.vaultId
+            vaultId: this.vaultId,
+            blockScanner: this.wallet.getBlockScanner()
           }
         });
       }
@@ -264,7 +264,8 @@ export class ActionFactory extends BaseFactory {
           actions: [this.getSwapAction(swapTokenTo)],
           walletData: {
             client: this.client,
-            vaultId: this.vaultId
+            vaultId: this.vaultId,
+            blockScanner: this.wallet.getBlockScanner()
           }
         });
       }
@@ -284,7 +285,8 @@ export class ActionFactory extends BaseFactory {
           ],
           walletData: {
             client: this.client,
-            vaultId: this.vaultId
+            vaultId: this.vaultId,
+            blockScanner: this.wallet.getBlockScanner()
           }
         });
       }
@@ -298,9 +300,15 @@ export class ActionFactory extends BaseFactory {
     targetRatio: number
   ): ActionSet {
     const decreaseVaultRatio = async () => {
+      const vault = await Vault.build(
+        this.client,
+        this.vaultId,
+        this.wallet.getBlockScanner()
+      );
       sendVaultRatioToTelegram(
-        await Vault.build(this.client, this.vaultId),
-        targetRatio
+        vault,
+        targetRatio,
+        (await vault.getNextCollateralRatio()).toNumber()
       );
       // Getting amounts
       const amounts = await this.wallet.getLoanAmount(
@@ -388,7 +396,8 @@ export class ActionFactory extends BaseFactory {
       actions: [decreaseVaultRatioAction],
       walletData: {
         client: this.client,
-        vaultId: this.vaultId
+        vaultId: this.vaultId,
+        blockScanner: this.wallet.getBlockScanner()
       }
     });
   }
@@ -398,7 +407,11 @@ export class ActionFactory extends BaseFactory {
     targetRatio: number
   ): ActionSet {
     const increaseVaultRatio = async () => {
-      const vault = await Vault.build(this.client, this.vaultId);
+      const vault = await Vault.build(
+        this.client,
+        this.vaultId,
+        this.wallet.getBlockScanner()
+      );
 
       //get Amounts
       const amounts = await this.wallet.getNeededRepay(
@@ -429,7 +442,11 @@ export class ActionFactory extends BaseFactory {
           throw 'Did not receive any TX Info ';
         }
 
-        sendVaultRatioToTelegram(vault, targetRatio);
+        sendVaultRatioToTelegram(
+          vault,
+          targetRatio,
+          (await vault.getNextCollateralRatio()).toNumber()
+        );
 
         logDebug(
           `-> Remove Liquidity posted in Transactions ${tx
@@ -445,7 +462,7 @@ export class ActionFactory extends BaseFactory {
         if (
           Math.min(
             vault.getCurrentCollateralRatio().toNumber(),
-            vault.getNextCollateralRatio().toNumber()
+            (await vault.getNextCollateralRatio()).toNumber()
           ) >
           vault.getVaultLoanSchemePercentage() +
             ConstantValues.additionalVaultRatioSafety
@@ -528,7 +545,8 @@ export class ActionFactory extends BaseFactory {
       actions: [increaseVaultRatioAction],
       walletData: {
         client: this.client,
-        vaultId: this.vaultId
+        vaultId: this.vaultId,
+        blockScanner: this.wallet.getBlockScanner()
       }
     });
   }

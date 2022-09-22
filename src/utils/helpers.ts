@@ -47,10 +47,13 @@ const sendMessageToTelegram = (message: string): void => {
  *
  * @param vault the message to send to telegram
  */
-const sendVaultRatioToTelegram = (vault: Vault, targetRatio: number): void => {
+const sendVaultRatioToTelegram = (
+  vault: Vault,
+  targetRatio: number,
+  nextRatio: number
+): void => {
   // check the values of the vault. If they don't make sense, send another message.
   const currentRatio = vault.getCurrentCollateralRatio().toNumber();
-  const nextRatio = vault.getNextCollateralRatio().toNumber();
 
   sendMessageToTelegram(
     currentRatio > 0

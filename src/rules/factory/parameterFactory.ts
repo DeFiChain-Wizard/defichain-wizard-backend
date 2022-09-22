@@ -40,12 +40,15 @@ export class ParameterFactory extends BaseFactory {
       name: 'nextVaultRatio',
       getValue: async () => {
         const vault = await this.wallet.getVault(this.vaultId);
+        const nextCollateralRatio = (
+          await vault.getNextCollateralRatio()
+        ).toNumber();
         logDebug(
-          `Next vault ratio for '${shortID(this.vaultId)}: ${vault
-            .getNextCollateralRatio()
-            .toNumber()}%.`
+          `Next vault ratio for '${shortID(
+            this.vaultId
+          )}: ${nextCollateralRatio}%.`
         );
-        return vault.getNextCollateralRatio().toNumber();
+        return nextCollateralRatio;
       }
     });
   }

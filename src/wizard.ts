@@ -16,7 +16,6 @@ import {
 } from './utils/helpers';
 import { ConstantValues } from './interfaces';
 import {
-  BlockScanner,
   CustomMessage,
   Transaction
 } from '@defichainwizard/custom-transactions';
@@ -49,22 +48,18 @@ class Wizard {
    * @param blockScanner The block scanner object that scans the blockchain
    * @param transaction The transaction utility to read the transactions
    */
-  private static async doMagic(
-    blockScanner: BlockScanner,
-    transaction: Transaction,
-    wallet: DFIWallet
-  ) {
+  private static async doMagic(transaction: Transaction, wallet: DFIWallet) {
     try {
+      const blockScanner = wallet.getBlockScanner();
       const currentBlock = await blockScanner.getCurrentBlock();
-      const currentBlockHeight = await blockScanner.getBlockHeight();
 
       // only do some magic when a new block has been found - no need to do it on the same block again
-      if (currentBlockHeight !== Wizard.lastBlockHeight) {
+      if (currentBlock.height !== Wizard.lastBlockHeight) {
         logInfo(
-          `New block found (${currentBlockHeight}), will start the analysis now...`
+          `New block found (${currentBlock.height}), will start the analysis now...`
         );
         // store current height so we don't check the same block again
-        Wizard.lastBlockHeight = currentBlockHeight;
+        Wizard.lastBlockHeight = currentBlock.height;
 
         logDebug(
           'Checking if there is a new configuration on the blockchain...'
@@ -95,12 +90,19 @@ class Wizard {
           };
 
           try {
-            // new config
+            // find new config
             const message = transaction.getCustomMessage(
               wizardTransaction.message
             );
 
             const ConfigMessage = message as CustomMessage;
+
+            // if ther was no pause configured in the previous configuration: don't send botActive Message
+            const config = getBotConfig(false);
+            if (config && config.pause === 0) {
+              Wizard.messageHasNotBeenSent.botActive = false;
+            }
+
             const vault = await wallet.getVault(ConfigMessage.vaultId);
             setBotConfig(message, vault.getVaultLoanSchemePercentage());
 
@@ -251,11 +253,13 @@ Please add it manually to get started.`
           currentVaultRatio = vault
             .getCurrentCollateralRatio()
             .decimalPlaces(3);
-          nextVaultRatio = vault.getNextCollateralRatio().decimalPlaces(3);
+          nextVaultRatio = (await vault.getNextCollateralRatio()).decimalPlaces(
+            3
+          );
         }
 
         logDebug(
-          `Last checked block: ${currentBlockHeight} - Vault Ratio Current: ${currentVaultRatio}% => Next: ${nextVaultRatio}%`
+          `Last checked block: ${currentBlock.height} - Vault Ratio Current: ${currentVaultRatio}% => Next: ${nextVaultRatio}%`
         );
       }
     } catch (e) {
@@ -355,7 +359,7 @@ Please add it manually to get started.`
     logDebug(`Github Version: ${gitHubVersion}`);
 
     if (semver.neq(gitHubVersion, botVersion)) {
-      sendMessageToTelegram(`⚙️ I've found a new backend version *${gitHubVersion}*
+      sendMessageToTelegram(`⚙️ I've found a different backend version *${gitHubVersion}*
 
 ☝️ Please update your bot on the server. Your current version is *${botVersion}*
 
@@ -400,12 +404,6 @@ If you make sure that this is the case, I will be happy to manage your vault for
     // print some wallet info at startup
     printWalletInfo(myWallet);
 
-    // Initialize BlockScanner with config
-    const blockScanner = new BlockScanner({
-      client: myWallet.getClient(),
-      address: await myWallet.getAddress()
-    });
-
     // Initialize Transaction with config
     const transaction = new Transaction({
       client: myWallet.getClient(),
@@ -419,7 +417,7 @@ If you make sure that this is the case, I will be happy to manage your vault for
     );
     // start and run our magic loop
     const interval = new SmartInterval(
-      () => Wizard.doMagic(blockScanner, transaction, myWallet),
+      () => Wizard.doMagic(transaction, myWallet),
       10000
     );
     interval.start();

@@ -43,14 +43,14 @@ export class RuleFactory extends BaseFactory {
     // Don't run Savety Check if ratio is high
     if (
       vault.getCurrentCollateralRatio().gt(safetyRatio) &&
-      vault.getNextCollateralRatio().gt(safetyRatio)
+      (await vault.getNextCollateralRatio()).gt(safetyRatio)
     ) {
       logDebug(
         `Current Vault Ratio is high enough. Skipping Safety-check (Curr: ${vault
           .getCurrentCollateralRatio()
-          .decimalPlaces(2)}% / Next: ${vault
-          .getNextCollateralRatio()
-          .decimalPlaces(2)}%)`
+          .decimalPlaces(2)}% / Next: ${(
+          await vault.getNextCollateralRatio()
+        ).decimalPlaces(2)}%)`
       );
       return true;
     }
