@@ -359,7 +359,7 @@ Please add it manually to get started.`
     logDebug(`Github Version: ${gitHubVersion}`);
 
     if (semver.neq(gitHubVersion, botVersion)) {
-      sendMessageToTelegram(`⚙️ I've found a new backend version *${gitHubVersion}*
+      sendMessageToTelegram(`⚙️ I've found a different backend version *${gitHubVersion}*
 
 ☝️ Please update your bot on the server. Your current version is *${botVersion}*
 
