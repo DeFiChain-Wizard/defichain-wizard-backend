@@ -224,8 +224,12 @@ Please add it manually to get started.`
                 'Waiting for next Block, after running Rule with Transactions sent'
               );
 
-              // make sure that we really wair - even if there where new blocks while processing
+              // make sure that we really wait - even if there where new blocks while processing
               Wizard.lastBlockHeight = await blockScanner.getBlockHeight();
+
+              if (ret.txID) {
+                logDebug(`Waiting for Transaction: ${ret.txID} to process...`);
+              }
 
               return;
             }
