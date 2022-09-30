@@ -80,6 +80,7 @@ export class ActionFactory extends BaseFactory {
       return {
         isSuccess: true,
         hasTxSent: true,
+        txID: tx.txId,
         prevout: Transaction.prevOutFromTx(tx)
       };
     };
@@ -208,6 +209,7 @@ export class ActionFactory extends BaseFactory {
       return {
         isSuccess: true,
         hasTxSent: true,
+        txID: tx.txId,
         prevout: Transaction.prevOutFromTx(tx)
       };
     };
@@ -373,6 +375,7 @@ export class ActionFactory extends BaseFactory {
         return {
           isSuccess: true,
           hasTxSent: true,
+          txID: txs[txs.length - 1].txId,
           prevout
         };
       } catch (e) {
@@ -522,6 +525,7 @@ export class ActionFactory extends BaseFactory {
         return {
           isSuccess: true,
           hasTxSent: true,
+          txID: tx.txId,
           prevout: Transaction.prevOutFromTx(tx)
         };
       } catch (e) {

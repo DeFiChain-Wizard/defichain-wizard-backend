@@ -224,8 +224,13 @@ Please add it manually to get started.`
                 'Waiting for next Block, after running Rule with Transactions sent'
               );
 
-              // make sure that we really wair - even if there where new blocks while processing
+              // make sure that we really wait - even if there where new blocks while processing
               Wizard.lastBlockHeight = await blockScanner.getBlockHeight();
+
+              if (ret.txID) {
+                logDebug(`Waiting for TX: ${ret.txID} to be processed.`);
+                await Wizard.waitForTransactionToBeposted(wallet, ret.txID);
+              }
 
               return;
             }
@@ -267,6 +272,36 @@ Please add it manually to get started.`
     }
 
     Wizard.wizardStart = false;
+  }
+
+  /**
+   * This method checks every 10 seconds if the transaction has been recorded by the Blockchain
+   * It exits after 90 tries or 15 minutes - to make sure the Wizard continues working
+   * @param wallet Wallet object
+   * @param txID Transaction ID
+   */
+  static async waitForTransactionToBeposted(
+    wallet: DFIWallet,
+    txID: string,
+    count?: number
+  ): Promise<void> {
+    const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+
+    // make sure to pass count for stopping the recursion after 90 times => 15 minutes
+    const nextRun = count === undefined ? 1 : count;
+
+    if (nextRun > 90) {
+      logDebug(`Exiting wait for Transaction after 900 seconds`);
+      return;
+    }
+
+    try {
+      await wallet.getClient().transactions.get(txID);
+    } catch (e) {
+      logDebug(`TX not processed yet (${count}).`);
+      await delay(10000);
+      await this.waitForTransactionToBeposted(wallet, txID, nextRun);
+    }
   }
 
   /**
@@ -361,7 +396,8 @@ Please add it manually to get started.`
     if (semver.neq(gitHubVersion, botVersion)) {
       sendMessageToTelegram(`⚙️ I've found a different backend version *${gitHubVersion}*
 
-☝️ Please update your bot on the server. Your current version is *${botVersion}*
+☝️ Please update your bot on the server. 
+  Your current version is *${botVersion}*
 
 https://youtu.be/1mW6MGr1Egg`);
     }

@@ -52,12 +52,14 @@ export class ActionSet {
     let error = false;
     const actionReturns: ActionReturn[] = [];
     let prevout: PreviousOuts = undefined;
+    let txID = '';
     let finishMessage = this.finishMessage;
     for (const act of this.actions) {
       try {
         const ret: ActionReturn = await act.run(prevout);
         //We send the prevout from the previous TX, if it has one, if not we send from the one before.
         prevout = ret.hasTxSent ? ret.prevout : prevout;
+        txID = ret.txID ? ret.txID : '';
 
         actionReturns.push(ret);
         if (!ret.isSuccess) {
@@ -83,12 +85,14 @@ export class ActionSet {
       return {
         isSuccess: actionReturns.every((act) => act.isSuccess),
         hasTxSent: actionReturns.some((act) => act.hasTxSent),
+        txID: txID,
         prevout: prevout
       };
     }
     return {
       isSuccess: false,
       hasTxSent: actionReturns.some((act) => act.hasTxSent),
+      txID: txID,
       prevout
     };
   }

@@ -100,6 +100,7 @@ export enum ConstantValues {
 }
 export interface ActionReturn {
   hasTxSent: boolean;
+  txID?: string;
   prevout?: PreviousOuts;
   isSuccess: boolean;
   finishMessage?: string;
