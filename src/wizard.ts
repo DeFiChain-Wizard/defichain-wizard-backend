@@ -229,7 +229,7 @@ Please add it manually to get started.`
 
               if (ret.txID) {
                 logDebug(`Waiting for TX: ${ret.txID} to be processed.`);
-                await Wizard.waitForTransactionToBeposted(wallet, ret.txID);
+                await Wizard.waitForTransactionToBePosted(wallet, ret.txID);
               }
 
               return;
@@ -280,7 +280,7 @@ Please add it manually to get started.`
    * @param wallet Wallet object
    * @param txID Transaction ID
    */
-  static async waitForTransactionToBeposted(
+  static async waitForTransactionToBePosted(
     wallet: DFIWallet,
     txID: string,
     count?: number
@@ -288,7 +288,7 @@ Please add it manually to get started.`
     const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
     // make sure to pass count for stopping the recursion after 90 times => 15 minutes
-    const nextRun = count === undefined ? 1 : count;
+    const nextRun = count === undefined ? 1 : count + 1;
 
     if (nextRun > 90) {
       logDebug(`Exiting wait for Transaction after 900 seconds`);
@@ -298,9 +298,11 @@ Please add it manually to get started.`
     try {
       await wallet.getClient().transactions.get(txID);
     } catch (e) {
-      logDebug(`TX not processed yet (${count}).`);
-      await delay(10000);
-      await this.waitForTransactionToBeposted(wallet, txID, nextRun);
+      logDebug(`TX not processed yet (${nextRun}).`);
+
+      // Wait for 10 seconds
+      await delay(ConstantValues.botSleepTime);
+      await this.waitForTransactionToBePosted(wallet, txID, nextRun);
     }
   }
 
@@ -454,7 +456,7 @@ If you make sure that this is the case, I will be happy to manage your vault for
     // start and run our magic loop
     const interval = new SmartInterval(
       () => Wizard.doMagic(transaction, myWallet),
-      10000
+      ConstantValues.botSleepTime
     );
     interval.start();
   }
