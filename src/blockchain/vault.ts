@@ -104,16 +104,24 @@ class Vault {
    * @returns Next Collateral Value
    */
   public async getNextCollateralValue(): Promise<BigNumber> {
-    const currentBlockHeight = await this.blockScanner.getBlockHeight();
+    let currentBlockHeight = 0;
+    try {
+      currentBlockHeight = await this.blockScanner.getBlockHeight();
+    } catch (e) {
+      // sometimes ocean does not return the block, in that case use FCE Value of 1.20%
+      currentBlockHeight = ConstantValues.dUSDCollateralIncreaseBlock;
+    }
 
     let USDCollateralValue = 0.0;
 
     // using: "if-immediate" for performance purposes
     if (currentBlockHeight < ConstantValues.dUSDCollateralIncreaseBlock) {
-      USDCollateralValue = 0.99;
+      // Use 0.99 as dUSD collateral value
+      USDCollateralValue = ConstantValues.dUSDCollateralValueBeforeFCE;
     } else if (
       currentBlockHeight >= ConstantValues.dUSDCollateralIncreaseBlock
     ) {
+      // use 1.20 as dUSD collateral Value
       USDCollateralValue = ConstantValues.dUSDCollateralValueFCE;
     }
 

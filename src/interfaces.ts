@@ -96,8 +96,11 @@ export enum ConstantValues {
   additionalVaultRatioSafety = 100, // this has to be reached by paying back all LM Tokens to pass the safety check
   initialLastConfigBlock = 2010000, // Initially it will be 2010000 (round July 2022, before DeFiChain Wizard was released) and will change once we found the first block that contained a config
   dUSDCollateralIncreaseBlock = 2257500, // FCE Update brings 120% dUSD Collateral Value
-  dUSDCollateralValueFCE = 1.2
+  dUSDCollateralValueFCE = 1.2,
+  dUSDCollateralValueBeforeFCE = 0.99,
+  botSleepTime = 10000 // sleep time before next processing starts in milliseconds 10.000 => 10 seconds
 }
+
 export interface ActionReturn {
   hasTxSent: boolean;
   txID?: string;
